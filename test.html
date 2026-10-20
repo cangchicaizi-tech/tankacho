@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="短歌帖 試験">
+<link rel="apple-touch-icon" href="icon.png">
+<title>短歌帖 試験版</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500&family=Yuji+Syuku&family=Zen+Kaku+Gothic+New:wght@400;500&display=swap">
+<style>
+:root{color-scheme:light; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+/* Layout: one narrow left-aligned column, hairline rules only, two text tabs (詠む / 歌集). The poem is the only thing set in Mincho at size; the single accent is the heart. */
+:root{
+  --bg:#F6F7F8; --fg:#1E2227; --mute:#7B838B; --line:#DFE2E5; --heart:#D2493F;
+  --serif:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho",serif;
+  --sans:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#121417; --fg:#E7E8EA; --mute:#8A9199; --line:#262A2F; --heart:#E8685D; color-scheme:dark }
+}
+:root[data-theme="dark"]{ --bg:#121417; --fg:#E7E8EA; --mute:#8A9199; --line:#262A2F; --heart:#E8685D; color-scheme:dark }
+
+body{
+  background:var(--bg); color:var(--fg); font-family:var(--sans); font-size:15px; line-height:1.7;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:20px 64px;
+}
+*{box-sizing:border-box}
+.wrap{max-width:540px; margin:0 auto}
+button,input,textarea{font:inherit; color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--fg); outline-offset:2px}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0)}
+
+.top{display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding-bottom:10px; border-bottom:1px solid var(--line)}
+h1{margin:0; font:500 19px/1.4 var(--serif); letter-spacing:.14em}
+.tabs{display:flex; gap:4px}
+.tabs button{background:none; border:0; border-bottom:1.5px solid transparent; padding:6px 8px; color:var(--mute); font-size:15px}
+.tabs button[aria-selected="true"]{color:var(--fg); border-color:var(--fg)}
+
+section{padding-top:18px}
+.note{margin:0 0 6px; font-size:12.5px; color:var(--mute)}
+.link{background:none; border:0; padding:8px 0; color:var(--mute); font-size:13px; text-decoration:underline; text-underline-offset:3px}
+.note .link{padding:0 0 0 6px; font-size:12.5px}
+
+textarea#poem{
+  display:block; width:100%; min-height:9.5em; resize:none; border:0; background:transparent;
+  border-top:1px solid var(--line); padding:12px 0 8px;
+  font:500 20px/2 var(--serif); letter-spacing:.04em; color:var(--fg);
+}
+textarea#poem::placeholder{color:var(--mute); opacity:.8}
+textarea#poem:focus{outline:none}
+
+.count{display:flex; border-top:1px solid var(--line); border-bottom:1px solid var(--line)}
+.cell{flex:1; min-width:0; padding:8px 0 7px; text-align:center; display:flex; flex-direction:column; gap:3px}
+.cell b{font:500 21px/1 var(--serif); font-variant-numeric:tabular-nums}
+.cell i{font-style:normal; font-size:11px; line-height:1; color:var(--mute); font-variant-numeric:tabular-nums}
+.cell.off b,.cell.off i{color:var(--heart)}
+.cell.none b{color:var(--mute); opacity:.5}
+.cell.total{flex:1.25; border-left:1px solid var(--line)}
+.yomi{margin:8px 0 0; font-size:12.5px; line-height:1.7; color:var(--fg); overflow-wrap:anywhere}
+.yomi b{font-weight:400; color:var(--mute); margin-right:8px}
+.hint{margin:8px 0 0; font-size:12.5px; line-height:1.6; color:var(--mute); min-height:1.6em}
+
+.pen{display:flex; align-items:center; gap:12px; margin-top:14px}
+.pen label{font-size:12.5px; color:var(--mute); white-space:nowrap}
+.pen input{flex:1; min-width:0; background:transparent; border:0; border-bottom:1px solid var(--line); padding:6px 0; font:500 16px/1.5 var(--serif); border-radius:0}
+.pen input:focus{outline:none; border-color:var(--fg)}
+
+.preview{margin-top:22px}
+.preview canvas,.preview img{display:block; width:min(100%, 340px); height:auto; margin:0 auto; border:1px solid var(--line)}
+
+.opts{margin-top:14px; display:flex; flex-direction:column}
+.optrow{display:flex; align-items:center; gap:10px; min-height:40px}
+.optrow > span{width:3.6em; flex:none; white-space:nowrap; font-size:12.5px; color:var(--mute)}
+.seg{display:flex; flex-wrap:wrap; min-width:0}
+.seg button{background:none; border:0; border-bottom:1.5px solid transparent; padding:6px 10px; color:var(--mute); font-size:14px; border-radius:0}
+.seg button[aria-pressed="true"]{color:var(--fg); border-color:var(--fg)}
+.seg button.sw{padding:7px; border-bottom:0}
+.seg button.sw i{display:block; width:22px; height:22px; border-radius:50%; box-shadow:inset 0 0 0 1px rgba(128,128,128,.5)}
+.seg button.sw[aria-pressed="true"]{box-shadow:none}
+.seg button.sw[aria-pressed="true"] i{box-shadow:inset 0 0 0 1px rgba(128,128,128,.5), 0 0 0 2px var(--bg), 0 0 0 3.5px var(--fg)}
+
+.optrow input[type="range"]{flex:1; min-width:0; accent-color:var(--fg); height:32px; margin:0}
+.optrow output{width:3.4em; flex:none; text-align:right; font-size:12.5px; color:var(--mute); font-variant-numeric:tabular-nums}
+.hint .link{padding:0 0 0 8px; font-size:12.5px}
+.actions{display:flex; gap:10px; margin-top:18px}
+.btn{flex:1; padding:12px 14px; border:1px solid var(--fg); border-radius:6px; background:transparent; font-size:15px; font-weight:500}
+.btn.primary{background:var(--fg); color:var(--bg)}
+
+.empty{padding:36px 0; color:var(--mute); font:400 15px/2 var(--serif)}
+.post{padding:20px 0; border-bottom:1px solid var(--line)}
+.ph{display:flex; align-items:center; gap:10px}
+.av{width:30px; height:30px; flex:none; border-radius:50%; border:1px solid var(--line); display:grid; place-items:center; font:500 14px/1 var(--serif)}
+.pn{font-size:14px; font-weight:500; min-width:0; overflow-wrap:anywhere}
+.pt{margin-left:auto; flex:none; font-size:12px; color:var(--mute)}
+.pl{margin:14px 0 10px 40px; font:500 18px/1.9 var(--serif); letter-spacing:.04em; overflow-wrap:anywhere}
+.pf{display:flex; align-items:center; gap:14px; margin-left:40px}
+.likes{display:inline-flex; align-items:center; gap:6px; min-width:2.6em; color:var(--mute); font-size:13px; font-variant-numeric:tabular-nums}
+.likes svg{width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linejoin:round}
+.likes.has{color:var(--heart)}
+.likes.has svg{fill:currentColor}
+.likes.pop svg{animation:pop .5s ease-out}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
+.pf .push{margin-left:auto}
+.pf .link.warn{color:var(--heart)}
+.backup{display:flex; flex-wrap:wrap; align-items:center; gap:4px 18px; margin-top:22px}
+.backup span{font-size:12px; color:var(--mute)}
+
+.toast{
+  position:fixed; left:50%; bottom:max(22px, calc(env(safe-area-inset-bottom, 0px) + 12px)); transform:translateX(-50%);
+  background:var(--fg); color:var(--bg); padding:8px 16px; border-radius:999px; font-size:13px; white-space:nowrap;
+  opacity:0; pointer-events:none; transition:opacity .2s;
+}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion: reduce){ .likes.pop svg{animation:none} .toast{transition:none} }
+</style>
+</head>
+<body>
+<main class="wrap" lang="ja">
+  <header class="top">
+    <h1>短歌帖<span style="font-size:12px;letter-spacing:.06em;color:var(--mute);margin-left:8px">試験版</span></h1>
+    <nav class="tabs" role="tablist" aria-label="表示">
+      <button type="button" role="tab" id="tabW" aria-selected="true" aria-controls="vW">詠む</button>
+      <button type="button" role="tab" id="tabF" aria-selected="false" aria-controls="vF">歌集<span id="feedN"></span></button>
+    </nav>
+  </header>
+
+  <section id="vW" role="tabpanel" aria-labelledby="tabW">
+    <p class="note" id="exNote">例：石川啄木の一首です。<button type="button" class="link" id="exClear">消して詠む</button></p>
+    <label class="sr" for="poem">短歌</label>
+    <textarea id="poem" rows="6" maxlength="400" spellcheck="false" autocapitalize="off" lang="ja" placeholder="上の句　下の句&#10;スペースか改行で句を区切ります"></textarea>
+    <div class="count" id="count" aria-live="polite"></div>
+    <p class="yomi" id="yomi" hidden></p>
+    <p class="hint" id="hint"></p>
+
+    <div class="pen">
+      <label for="pen">歌号</label>
+      <input id="pen" maxlength="10" placeholder="ペンネーム" autocomplete="off">
+    </div>
+
+    <div class="preview">
+      <canvas id="cv" width="1080" height="1350" aria-label="縦書きのプレビュー"></canvas>
+      <img id="fb" hidden alt="縦書きの短歌画像">
+    </div>
+    <p class="hint" id="fbNote" hidden>画像を長押しして保存してください。</p>
+
+    <div class="opts">
+      <div class="optrow"><span>色</span><div class="seg" id="oScheme" role="group" aria-label="色"></div></div>
+      <div class="optrow"><span>書体</span><div class="seg" id="oFont" role="group" aria-label="書体"></div></div>
+      <div class="optrow"><span>比率</span><div class="seg" id="oRatio" role="group" aria-label="比率"></div></div>
+      <div class="optrow"><span>署名</span><div class="seg" id="oSign" role="group" aria-label="署名"></div></div>
+      <div class="optrow"><span>大きさ</span><input type="range" id="scale" min="20" max="130" step="5" value="100" aria-label="文字の大きさ"><output id="scaleOut" for="scale">100%</output></div>
+      <div class="optrow"><span>余白</span><input type="range" id="margin" min="4" max="24" step="1" value="12" aria-label="画像の余白"><output id="marginOut" for="margin">12%</output></div>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn" id="save">画像を保存</button>
+      <button type="button" class="btn primary" id="post">投稿する</button>
+    </div>
+  </section>
+
+  <section id="vF" role="tabpanel" aria-labelledby="tabF" hidden>
+    <div id="list"></div>
+    <p class="empty" id="empty">まだ歌がありません。<br>「詠む」から最初の一首を投稿してください。</p>
+    <div class="backup">
+      <button type="button" class="link" id="exp">書き出す</button>
+      <button type="button" class="link" id="imp">読み込む</button>
+      <span>バックアップ用のJSONファイル</span>
+      <input type="file" id="file" accept="application/json,.json" hidden>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+'use strict';
+var $=function(s){return document.querySelector(s)};
+
+/* ---------- constants ---------- */
+var SCHEMES={
+  white:{bg:'#F7F7F5',ink:'#1E2227',mute:'#8A9097',label:'白'},
+  sumi:{bg:'#15181B',ink:'#E9E7E2',mute:'#7F858B',label:'墨'},
+  ai:{bg:'#1F2B3F',ink:'#E6EBF2',mute:'#8392A8',label:'藍'},
+  sakura:{bg:'#F2E3E3',ink:'#3A2A2E',mute:'#9A8588',label:'桜'}
+};
+var FONTS={
+  mincho:{family:'Shippori Mincho',weight:500,label:'明朝'},
+  brush:{family:'Yuji Syuku',weight:400,label:'筆'},
+  gothic:{family:'Zen Kaku Gothic New',weight:500,label:'ゴシック'}
+};
+var RATIOS={sq:{w:1080,h:1080,label:'正方形'},p45:{w:1080,h:1350,label:'4:5'},p34:{w:1080,h:1440,label:'3:4'},l43:{w:1440,h:1080,label:'4:3'},story:{w:1080,h:1920,label:'9:16'}};
+var TARGET=[5,7,5,7,7];
+var EXAMPLE='とうかいの\nこじまのいその\nしらすなに\nわれなきぬれて\nかにとたはむる';
+var HEART='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.8l-1.2-1.1C5.9 15.3 2.8 12.5 2.8 8.9 2.8 6 5 3.8 7.8 3.8c1.6 0 3.2.8 4.2 2 1-1.2 2.6-2 4.2-2 2.8 0 5 2.2 5 5.1 0 3.6-3.1 6.4-8 10.8z"/></svg>';
+
+/* ---------- storage helpers ---------- */
+var ls={
+  get:function(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},
+  set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+};
+function valid(p){return p&&typeof p.id==='string'&&typeof p.text==='string'&&isFinite(p.at)&&isFinite(p.seed)&&isFinite(p.total)}
+
+/* ---------- elements ---------- */
+var poem=$('#poem'), penEl=$('#pen'), cv=$('#cv'), fb=$('#fb'), fbNote=$('#fbNote');
+var countEl=$('#count'), hintEl=$('#hint'), exNote=$('#exNote');
+var listEl=$('#list'), emptyEl=$('#empty'), feedN=$('#feedN'), toastEl=$('#toast');
+
+/* ---------- state ---------- */
+var cfg=Object.assign({scheme:'white',font:'mincho',ratio:'p45',sign:true}, ls.get('tankacho:cfg')||{});
+if(!SCHEMES[cfg.scheme])cfg.scheme='white';
+if(!FONTS[cfg.font])cfg.font='mincho';
+if(!RATIOS[cfg.ratio])cfg.ratio='p45';
+cfg.sign=cfg.sign!==false;
+cfg.scale=Number(cfg.scale);
+if(!(cfg.scale>=20&&cfg.scale<=130))cfg.scale=100;
+cfg.margin=Number(cfg.margin);
+if(!(cfg.margin>=4&&cfg.margin<=24))cfg.margin=12;
+
+var state={poems:[],pen:''};
+var saved=ls.get('tankacho:v1');
+if(saved&&Array.isArray(saved.poems)){state.poems=saved.poems.filter(valid);state.pen=typeof saved.pen==='string'?saved.pen:''}
+penEl.value=state.pen;
+
+var draft=ls.get('tankacho:draft');
+var exampleOn=false;
+if(draft&&typeof draft.text==='string'){poem.value=draft.text}else{poem.value=EXAMPLE;exampleOn=true}
+exNote.hidden=!exampleOn;
+
+var lastBlob=null;
+
+/* ---------- toast ---------- */
+var tt;
+function toast(m){toastEl.textContent=m;toastEl.classList.add('on');clearTimeout(tt);tt=setTimeout(function(){toastEl.classList.remove('on')},2200)}
+
+/* ---------- 音数 ---------- */
+var KANJI='[\\u4e00-\\u9fff\\u3400-\\u4dbf々〆]';
+var RE_READING=new RegExp('('+KANJI+'+|ヶ)《([^》]*)》','g');
+/* よく使う言葉は内蔵の読みの音数で数える。それ以外の漢字は1字2音の目安 */
+var DICT={}, DMAX=1;
+('月2 空2 海2 花2 風2 雨2 山2 川2 桜3 恋2 夢2 君2 人2 心3 春2 夏2 秋2 冬2 雪2 星2 光3 涙3 愛2 声2 朝2 夜2 昼2 道2 町2 森2 船2 鳥2 家2 水2 手1 目1 葉1 木1 酒2 母2 父2 彼2 時2 今2 命3 私3 僕2 俺2 白2 黒2 赤2 青2 色2 音2 歌2 '
++'今日2 今朝2 今年3 今夜3 昨日3 毎日4 世界3 時間3 東京4 日本3 学校4 先生4 友達4 家族3 子供3 彼女3 言葉3 約束4 永遠4 東海4 夕焼け4 夕暮れ4 思い出4').split(' ').forEach(function(e){
+  var m=e.match(/^(.+?)(\d)$/);DICT[m[1]]=Number(m[2]);DMAX=Math.max(DMAX,Array.from(m[1]).length);
+});
+function mora(str){
+  var n=0, approx=false, kanji=false, chars=Array.from(str), kre=new RegExp(KANJI);
+  for(var i=0;i<chars.length;i++){
+    var c=chars[i];
+    if(kre.test(c)){
+      var hit=false;
+      for(var len=Math.min(DMAX,chars.length-i);len>=1;len--){
+        var w=chars.slice(i,i+len).join('');
+        if(DICT[w]!=null){n+=DICT[w];i+=len-1;hit=true;break}
+      }
+      if(!hit){n+=2;approx=true;kanji=true}
+      continue;
+    }
+    if(/[ゃゅょぁぃぅぇぉゎャュョァィゥェォヮ]/.test(c)) continue;
+    if(/[ぁ-ゖゝゞァ-ヺー-ヿ]/.test(c)){n+=1;continue}
+    if(c==='ヶ'){n+=1;continue}
+    if(/[A-Za-z0-9０-９Ａ-Ｚａ-ｚ]/.test(c)){n+=1;approx=true;continue}
+  }
+  return {n:n,approx:approx,kanji:kanji};
+}
+/* ---------- 辞書による読み（kuromoji を別スレッドで動かす） ---------- */
+var KURO_JS='https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/build/kuromoji.js';
+var KURO_DIC='https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/dict/';
+var dictState='loading', dictWorker=null, readCache={}, readAsked={}, cacheN=0;
+function startDict(){
+  try{
+    var src='importScripts('+JSON.stringify(KURO_JS)+');\n'
+    +'var tk=null,q=[];\n'
+    +'kuromoji.builder({dicPath:'+JSON.stringify(KURO_DIC)+'}).build(function(err,t){\n'
+    +'  if(err){postMessage({type:"error"});return}\n'
+    +'  tk=t;postMessage({type:"ready"});q.forEach(run);q=[];\n'
+    +'});\n'
+    +'function run(m){\n'
+    +'  var out=m.texts.map(function(tx){\n'
+    +'    try{return tk.tokenize(tx).map(function(t){var r=t.reading;return (r&&r!=="*")?r:t.surface_form}).join("")}catch(e){return tx}\n'
+    +'  });\n'
+    +'  postMessage({type:"result",texts:m.texts,out:out});\n'
+    +'}\n'
+    +'onmessage=function(e){if(tk)run(e.data);else q.push(e.data)};';
+    var url=URL.createObjectURL(new Blob([src],{type:'application/javascript'}));
+    dictWorker=new Worker(url);
+    dictWorker.onmessage=function(e){
+      var m=e.data;
+      if(m.type==='ready'){dictState='ready';renderCount()}
+      else if(m.type==='error'){dictState='failed';renderCount()}
+      else if(m.type==='result'){
+        if(cacheN>600){readCache={};readAsked={};cacheN=0}
+        m.texts.forEach(function(t,i){readCache[t]=m.out[i];cacheN++});
+        renderCount();
+      }
+    };
+    dictWorker.onerror=function(){if(dictState!=='ready')dictState='failed';renderCount()};
+  }catch(e){dictState='failed'}
+}
+function askDict(need){
+  if(dictState!=='ready'||!dictWorker)return;
+  var list=need.filter(function(t){return readCache[t]==null&&!readAsked[t]});
+  if(!list.length)return;
+  list.forEach(function(t){readAsked[t]=1});
+  dictWorker.postMessage({texts:list});
+}
+
+/* 《よみ》指定 → 辞書の読み → 目安、の順に使う */
+var NEEDS_READING=new RegExp(KANJI+'|[A-Za-z0-9０-９Ａ-Ｚａ-ｚ]');
+function splitParts(seg){
+  var parts=[],last=0,m,re=new RegExp('('+KANJI+'+|ヶ)《([^》]*)》','g');
+  while((m=re.exec(seg))){
+    if(m.index>last)parts.push({t:seg.slice(last,m.index)});
+    parts.push({t:m[1],r:m[2]});
+    last=m.index+m[0].length;
+  }
+  if(last<seg.length)parts.push({t:seg.slice(last)});
+  return parts;
+}
+function parse(raw,need){
+  return raw.split(/[\s　]+/).filter(Boolean).map(function(seg){
+    var show=seg.replace(/《[^》]*》/g,'');
+    var reading=splitParts(seg).map(function(p){
+      if(p.r!=null)return p.r.replace(/《[^》]*》/g,'');
+      var t=p.t.replace(/《[^》]*》/g,'');
+      if(!NEEDS_READING.test(t))return t;
+      if(readCache[t]!=null)return readCache[t];
+      if(need)need.push(t);
+      return t;
+    }).join('');
+    var m=mora(reading);
+    return {show:show,n:m.n,approx:m.approx,kanji:m.kanji,reading:reading};
+  }).filter(function(x){return x.show.length>0});
+}
+function toHira(s){return s.replace(/[ァ-ヶ]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0x60)})}
+var KRE=new RegExp(KANJI);
+function renderCount(){
+  var need=[], segs=parse(poem.value,need), len=Math.max(5,segs.length), html='', total=0, approx=false;
+  for(var i=0;i<len;i++){
+    var s=segs[i], t=TARGET[i];
+    if(!s){html+='<div class="cell none"><b>–</b><i>'+(t!=null?t:'')+'</i></div>';continue}
+    total+=s.n; if(s.approx)approx=true;
+    var sub=t!=null?String(t):'', off=false;
+    if(t!=null&&segs.length>1&&s.n!==t){off=true;var d=s.n-t;sub=(d>0?'+':'−')+Math.abs(d)}
+    html+='<div class="cell'+(off?' off':'')+'"><b>'+(s.approx?'≈':'')+s.n+'</b><i>'+sub+'</i></div>';
+  }
+  var empty=segs.length===0;
+  var tOff=!empty&&total!==31;
+  html+='<div class="cell total'+(tOff?' off':'')+(empty?' none':'')+'"><b>'+(empty?'–':(approx?'≈':'')+total)+'</b><i>計 / 31</i></div>';
+  countEl.innerHTML=html;
+  askDict(need);
+
+  var hasKanji=poem.value.split(/[\s　]+/).some(function(x){return NEEDS_READING.test(x.replace(/《[^》]*》/g,''))});
+  var yEl=$('#yomi');
+  if(hasKanji&&segs.length&&(dictState==='ready'||segs.some(function(x){return x.reading!==x.show}))){
+    var b=document.createElement('b');b.textContent='読み';
+    yEl.textContent='';yEl.appendChild(b);
+    yEl.appendChild(document.createTextNode(segs.map(function(x){return toHira(x.reading)}).join(' / ')));
+    yEl.hidden=false;
+  }else yEl.hidden=true;
+
+  var hint='';
+  if(segs.length<=1&&!hasKanji) hint='スペースか改行で句を区切ると、句ごとに音数を数えます。';
+  else if(hasKanji&&dictState==='loading') hint='辞書を読み込み中です。それまで漢字は目安（≈）で数えます。';
+  else if(hasKanji&&dictState==='failed') hint='辞書を読み込めませんでした。漢字は目安（≈）で数えます。《よみ》を付けると正確になります。';
+  else if(approx&&dictState==='ready') hint='読みが分からない部分は≈で数えます。漢字のあとに《よみ》を付けると正確になります。';
+  else if(hasKanji&&dictState==='ready') hint='読みが違うときは、漢字のあとに《よみ》を付けて直せます（画像と投稿には出ません）。';
+  hintEl.textContent=hint;
+}
+
+/* ---------- vertical image ---------- */
+var ROT=/[ー〜～―─—…‥「」『』（）()［］\[\]【】〈〉《》｛｝{}\-–]/;
+var PUNC=/[、。，．]/;
+var SMALL=/[ゃゅょぁぃぅぇぉゎっャュョァィゥェォヮッ]/;
+function glyph(ctx,ch,x,y,s){
+  ch=ch.replace(/[A-Za-z0-9]/,function(c){return String.fromCharCode(c.charCodeAt(0)+0xFEE0)});
+  if(ROT.test(ch)){ctx.save();ctx.translate(x,y);ctx.rotate(Math.PI/2);ctx.fillText(ch,0,0);ctx.restore()}
+  else if(PUNC.test(ch)){ctx.fillText(ch,x+s*0.5,y-s*0.55)}
+  else if(SMALL.test(ch)){ctx.fillText(ch,x+s*0.1,y-s*0.1)}
+  else ctx.fillText(ch,x,y);
+}
+var drawTok=0, pending=Promise.resolve();
+async function draw(){
+  var tok=++drawTok;
+  lastBlob=null;
+  var f=FONTS[cfg.font], sc=SCHEMES[cfg.scheme], R=RATIOS[cfg.ratio], W=R.w, H=R.h;
+  var segs=parse(poem.value).map(function(s){return s.show});
+  var pen=(penEl.value||'').trim();
+  var hasPen=cfg.sign&&pen.length>0;
+  try{await document.fonts.load(f.weight+' 64px "'+f.family+'"', (segs.join('')+(hasPen?pen:''))||'あ')}catch(e){}
+  if(tok!==drawTok)return;
+  fb.hidden=true;cv.hidden=false;fbNote.hidden=true;
+  cv.width=W;cv.height=H;
+  var ctx=cv.getContext('2d');
+  ctx.fillStyle=sc.bg;ctx.fillRect(0,0,W,H);
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  if(!segs.length){
+    ctx.fillStyle=sc.mute;ctx.font='400 40px "Zen Kaku Gothic New", sans-serif';
+    ctx.fillText('ここに縦書きで表示されます',W/2,H/2);return;
+  }
+  var mx=W*cfg.margin/100, my=H*cfg.margin/100, availW=W-2*mx, availH=H-2*my;
+  function layout(size){
+    var rows=Math.max(1,Math.floor(availH/(size*1.12))), c=[];
+    segs.forEach(function(seg){var chars=Array.from(seg);for(var i=0;i<chars.length;i+=rows)c.push(chars.slice(i,i+rows))});
+    return {cols:c,w:c.length*size*1.9+(hasPen?size*1.0:0)};
+  }
+  var auto=28;
+  for(var size=88;size>=28;size-=2){auto=size;if(layout(size).w<=availW)break}
+  var s=auto*cfg.scale/100, L=layout(s);
+  while(s>20&&L.w>W*0.94){s-=2;L=layout(s)}
+  var cols=L.cols;
+  var cp=s*1.9, pitch=s*1.12;
+  var maxLen=0;cols.forEach(function(col){maxLen=Math.max(maxLen,col.length*pitch)});
+  var top=my+(availH-maxLen)/2;
+  var groupW=cols.length*cp+(hasPen?s*1.0:0);
+  var left=(W-groupW)/2, right=left+groupW;
+  ctx.fillStyle=sc.ink;
+  ctx.font=f.weight+' '+s+'px "'+f.family+'", serif';
+  cols.forEach(function(col,k){
+    var cx=right-cp*(k+0.5);
+    col.forEach(function(ch,i){glyph(ctx,ch,cx,top+pitch*(i+0.5),s)});
+  });
+  if(hasPen){
+    var ps=Math.max(s*0.5,24), pp=ps*1.15, pc=Array.from(pen);
+    ctx.fillStyle=sc.mute;
+    ctx.font=f.weight+' '+ps+'px "'+f.family+'", serif';
+    var bottom=top+maxLen, startY=bottom-pc.length*pp, cx2=left+s*0.45;
+    pc.forEach(function(ch,i){glyph(ctx,ch,cx2,startY+pp*(i+0.5),ps)});
+  }
+  cv.toBlob(function(bl){if(tok===drawTok)lastBlob=bl},'image/png');
+}
+function redraw(){pending=draw()}
+
+/* ---------- options ---------- */
+function seg(id,items,key){
+  var box=$(id);box.innerHTML='';
+  items.forEach(function(it){
+    var b=document.createElement('button');b.type='button';
+    b.setAttribute('aria-pressed',String(cfg[key]===it.v));
+    if(it.sw){
+      b.className='sw';b.setAttribute('aria-label',it.label);
+      var i=document.createElement('i');
+      i.style.background='linear-gradient(135deg,'+it.sw[0]+' 50%,'+it.sw[1]+' 50%)';
+      b.appendChild(i);
+    }else b.textContent=it.label;
+    b.addEventListener('click',function(){cfg[key]=it.v;ls.set('tankacho:cfg',cfg);buildOpts();redraw()});
+    box.appendChild(b);
+  });
+}
+function buildOpts(){
+  seg('#oScheme',Object.keys(SCHEMES).map(function(k){return {v:k,label:SCHEMES[k].label,sw:[SCHEMES[k].bg,SCHEMES[k].ink]}}),'scheme');
+  seg('#oFont',Object.keys(FONTS).map(function(k){return {v:k,label:FONTS[k].label}}),'font');
+  seg('#oRatio',Object.keys(RATIOS).map(function(k){return {v:k,label:RATIOS[k].label}}),'ratio');
+  seg('#oSign',[{v:true,label:'あり'},{v:false,label:'なし'}],'sign');
+}
+
+/* ---------- likes (simulated, derived from a seed so nothing is rewritten) ---------- */
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+var schedCache={};
+function times(p){
+  if(schedCache[p.id])return schedCache[p.id];
+  var r=mulberry(p.seed>>>0), t=[], H=3600000;
+  for(var i=0;i<p.total;i++){
+    var d=i===0?25000+r()*80000:30000+(-Math.log(1-r()*0.98))*2.2*H;
+    t.push(p.at+Math.min(d,40*H));
+  }
+  t.sort(function(a,b){return a-b});
+  return schedCache[p.id]=t;
+}
+function likes(p){var t=times(p),now=Date.now(),n=0;while(n<t.length&&t[n]<=now)n++;return n}
+function newTotal(){
+  var n=3+Math.floor(Math.random()*9);
+  if(Math.random()<0.15)n+=8+Math.floor(Math.random()*26);
+  return n;
+}
+function ago(t){
+  var d=Date.now()-t;
+  if(d<60000)return 'たった今';
+  if(d<3600000)return Math.floor(d/60000)+'分前';
+  if(d<86400000)return Math.floor(d/3600000)+'時間前';
+  if(d<7*86400000)return Math.floor(d/86400000)+'日前';
+  var x=new Date(t);return (x.getMonth()+1)+'/'+x.getDate();
+}
+
+/* ---------- feed ---------- */
+function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
+function applyLikes(node,p,animate){
+  var n=likes(p), prev=Number(node.dataset.n||0);
+  node.dataset.n=n;
+  node.classList.toggle('has',n>0);
+  node.querySelector('.n').textContent=n>0?String(n):'';
+  node.setAttribute('aria-label','いいね '+n+'件');
+  if(animate&&n>prev){node.classList.remove('pop');void node.offsetWidth;node.classList.add('pop')}
+}
+function renderFeed(){
+  listEl.innerHTML='';
+  var ps=state.poems.slice().sort(function(a,b){return b.at-a.at});
+  emptyEl.hidden=ps.length>0;
+  feedN.textContent=ps.length?'（'+ps.length+'）':'';
+  ps.forEach(function(p){
+    var art=el('article','post');art.dataset.id=p.id;
+    var name=p.pen||'詠み人知らず';
+    var head=el('div','ph');
+    head.appendChild(el('span','av',Array.from(name)[0]));
+    head.appendChild(el('span','pn',name));
+    var tm=el('span','pt',ago(p.at));tm.dataset.at=p.at;head.appendChild(tm);
+    art.appendChild(head);
+    var body=el('div','pl');
+    var segs=parse(p.text);
+    (segs.length?segs:[{show:p.text}]).forEach(function(s){body.appendChild(el('div','',s.show))});
+    art.appendChild(body);
+    var foot=el('div','pf');
+    var lk=el('span','likes');lk.innerHTML=HEART+'<span class="n"></span>';
+    applyLikes(lk,p,false);foot.appendChild(lk);
+    var toImg=el('button','link push','画像にする');toImg.type='button';
+    toImg.addEventListener('click',function(){loadToCompose(p)});
+    var del=el('button','link','削除');del.type='button';
+    var armed=false,tm2;
+    del.addEventListener('click',function(){
+      if(!armed){armed=true;del.textContent='本当に削除';del.classList.add('warn');tm2=setTimeout(function(){armed=false;del.textContent='削除';del.classList.remove('warn')},3000);return}
+      clearTimeout(tm2);
+      state.poems=state.poems.filter(function(x){return x.id!==p.id});
+      persist();renderFeed();toast('削除しました');
+    });
+    foot.appendChild(toImg);foot.appendChild(del);
+    art.appendChild(foot);
+    listEl.appendChild(art);
+  });
+}
+function tick(){
+  var map={};state.poems.forEach(function(p){map[p.id]=p});
+  document.querySelectorAll('.post').forEach(function(node){
+    var p=map[node.dataset.id];if(!p)return;
+    applyLikes(node.querySelector('.likes'),p,true);
+    node.querySelector('.pt').textContent=ago(p.at);
+  });
+}
+setInterval(tick,15000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)tick()});
+
+/* ---------- persistence ---------- */
+function persist(){ls.set('tankacho:v1',state)}
+var penT;
+function saveDraft(){ls.set('tankacho:draft',{text:poem.value})}
+function mergePoems(a,b){
+  var seen={},out=[];
+  a.concat(b).forEach(function(p){if(valid(p)&&!seen[p.id]){seen[p.id]=1;out.push({id:p.id,text:p.text,pen:p.pen||'',at:p.at,seed:p.seed,total:p.total})}});
+  return out;
+}
+
+/* ---------- actions ---------- */
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function stamp(){var d=new Date(),z=function(n){return String(n).padStart(2,'0')};return ''+d.getFullYear()+z(d.getMonth()+1)+z(d.getDate())+'-'+z(d.getHours())+z(d.getMinutes())}
+function showTab(which){
+  var w=which==='write';
+  $('#vW').hidden=!w;$('#vF').hidden=w;
+  $('#tabW').setAttribute('aria-selected',String(w));
+  $('#tabF').setAttribute('aria-selected',String(!w));
+  if(!w)tick();
+  window.scrollTo(0,0);
+}
+function loadToCompose(p){
+  poem.value=p.text;penEl.value=p.pen||penEl.value;
+  state.pen=penEl.value;exampleOn=false;exNote.hidden=true;
+  saveDraft();renderCount();redraw();showTab('write');
+}
+$('#post').addEventListener('click',function(){
+  var raw=poem.value.trim();
+  if(!raw){toast('歌を入力してください');return}
+  state.pen=(penEl.value||'').trim();
+  state.poems.push({id:uid(),text:raw,pen:state.pen,at:Date.now(),seed:(Math.random()*4294967296)>>>0,total:newTotal()});
+  persist();
+  poem.value='';exampleOn=false;exNote.hidden=true;
+  saveDraft();renderCount();redraw();renderFeed();showTab('feed');
+  toast('投稿しました');
+});
+function downloadBlob(blob,name){
+  var url=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(function(){URL.revokeObjectURL(url)},5000);
+}
+$('#save').addEventListener('click',async function(){
+  if(!parse(poem.value).length){toast('歌を入力してください');return}
+  var blob=lastBlob;
+  if(!blob){await pending;blob=await new Promise(function(r){cv.toBlob(r,'image/png')})}
+  if(!blob){toast('画像を作れませんでした');return}
+  var name='tanka-'+stamp()+'.png';
+  try{
+    var file=new File([blob],name,{type:'image/png'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file]});return}
+  }catch(e){if(e&&e.name==='AbortError')return}
+  try{downloadBlob(blob,name)}
+  catch(e){fb.src=cv.toDataURL('image/png');fb.hidden=false;cv.hidden=true;fbNote.hidden=false}
+});
+$('#exClear').addEventListener('click',function(){
+  poem.value='';exampleOn=false;exNote.hidden=true;saveDraft();renderCount();redraw();poem.focus();
+});
+poem.addEventListener('input',function(){
+  if(exampleOn){exampleOn=false;exNote.hidden=true}
+  saveDraft();renderCount();redraw();
+});
+penEl.addEventListener('input',function(){
+  state.pen=penEl.value.trim();redraw();
+  clearTimeout(penT);penT=setTimeout(persist,900);
+});
+var scaleEl=$('#scale'), scaleOut=$('#scaleOut');
+scaleEl.value=cfg.scale;scaleOut.textContent=cfg.scale+'%';
+scaleEl.addEventListener('input',function(){
+  cfg.scale=Number(scaleEl.value);scaleOut.textContent=cfg.scale+'%';
+  ls.set('tankacho:cfg',cfg);redraw();
+});
+var marginEl=$('#margin'), marginOut=$('#marginOut');
+marginEl.value=cfg.margin;marginOut.textContent=cfg.margin+'%';
+marginEl.addEventListener('input',function(){
+  cfg.margin=Number(marginEl.value);marginOut.textContent=cfg.margin+'%';
+  ls.set('tankacho:cfg',cfg);redraw();
+});
+$('#tabW').addEventListener('click',function(){showTab('write')});
+$('#tabF').addEventListener('click',function(){showTab('feed')});
+
+/* backup */
+$('#exp').addEventListener('click',function(){
+  var data=JSON.stringify({v:1,pen:state.pen,poems:state.poems},null,1);
+  try{downloadBlob(new Blob([data],{type:'application/json'}),'tankacho-'+stamp()+'.json')}
+  catch(e){toast('書き出せませんでした')}
+});
+$('#imp').addEventListener('click',function(){$('#file').click()});
+$('#file').addEventListener('change',function(ev){
+  var f=ev.target.files&&ev.target.files[0];if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    try{
+      var d=JSON.parse(String(rd.result));
+      var before=state.poems.length;
+      state.poems=mergePoems(state.poems,Array.isArray(d.poems)?d.poems:[]);
+      if(!state.pen&&typeof d.pen==='string'){state.pen=d.pen.slice(0,10);penEl.value=state.pen;redraw()}
+      persist();renderFeed();toast((state.poems.length-before)+'首 読み込みました');
+    }catch(e){toast('読み込めないファイルです')}
+    ev.target.value='';
+  };
+  rd.readAsText(f);
+});
+
+/* ---------- init ---------- */
+buildOpts();renderCount();renderFeed();redraw();startDict();
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(redraw);
+
+})();
+</script>
+</body>
+</html>
